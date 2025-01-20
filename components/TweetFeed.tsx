@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTweets, useUsername, useInitialUser } from "@/hooks/useTweets"
 import { Tweet } from "./Tweet"
