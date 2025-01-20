@@ -1,101 +1,100 @@
-import Image from "next/image";
+"use client"
+
+import { useState, useEffect } from "react"
+import { useTweets } from "../hooks/useTweets"
+import { Tweet } from "../components/Tweet"
+import { UserProfile } from "../components/UserProfile"
+
+// Helper function to generate a mock Ethereum address
+function generateMockEthereumAddress() {
+  return "0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("")
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [userId, setUserId] = useState("")
+  const [username, setUsername] = useState("Anonymous")
+  const [newTweet, setNewTweet] = useState("")
+  const [filter, setFilter] = useState("")
+  const { tweets, users, addTweet, updateUsername, addUser } = useTweets()
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId")
+    const storedUsername = localStorage.getItem("username")
+    if (storedUserId && storedUsername) {
+      setUserId(storedUserId)
+      setUsername(storedUsername)
+    } else {
+      const newUserId = generateMockEthereumAddress()
+      setUserId(newUserId)
+      localStorage.setItem("userId", newUserId)
+      localStorage.setItem("username", "Anonymous")
+      addUser(newUserId, "Anonymous")
+    }
+  }, [])
+
+  const handleUsernameChange = (newUsername: string) => {
+    setUsername(newUsername)
+    localStorage.setItem("username", newUsername)
+    updateUsername(userId, newUsername)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newTweet.trim()) {
+      addTweet(newTweet, userId)
+      setNewTweet("")
+    }
+  }
+
+  const handleUsernameClick = (clickedUsername: string) => {
+    setFilter(clickedUsername)
+  }
+
+  const clearFilter = () => {
+    setFilter("")
+  }
+
+  const filteredTweets = filter ? tweets.filter((tweet) => tweet.username === filter) : tweets
+
+  return (
+    <div className="max-w-2xl mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-4">Simple Twitter Clone</h1>
+      <UserProfile userId={userId} username={username} onUsernameChange={handleUsernameChange} />
+      <form onSubmit={handleSubmit} className="mb-4">
+        <textarea
+          value={newTweet}
+          onChange={(e) => setNewTweet(e.target.value)}
+          placeholder="What's happening?"
+          className="w-full border rounded p-2 mb-2"
+          rows={3}
+        />
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
+          Tweet
+        </button>
+      </form>
+      {filter && (
+        <div className="mb-4 flex items-center">
+          <p className="mr-2">
+            Showing tweets by: <strong>{filter}</strong>
+          </p>
+          <button onClick={clearFilter} className="bg-gray-200 text-gray-800 px-2 py-1 rounded text-sm">
+            Clear filter
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      )}
+      <div>
+        {filteredTweets.map((tweet) => (
+          <Tweet
+            key={tweet.id}
+            content={tweet.content}
+            username={tweet.username}
+            userId={tweet.userId}
+            timestamp={tweet.timestamp}
+            onUsernameClick={handleUsernameClick}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        ))}
+      </div>
     </div>
-  );
+  )
 }
+
