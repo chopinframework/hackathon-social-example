@@ -34,8 +34,7 @@ export function TweetFeed() {
   const { data: filterUser } = useUsername(filterUserId)
 
   // Infinite scroll
-  const observerTarget = useRef<HTMLDivElement>(null)
-  const intersectionObserver = useCallback((node: HTMLDivElement) => {
+  const intersectionObserver = useCallback((node: HTMLDivElement | null) => {
     if (!node) return
     const observer = new IntersectionObserver(
       (entries) => {

@@ -1,5 +1,4 @@
 import { sql } from '@vercel/postgres'
-import { Tweet } from '@/lib/types'
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query'
 import { TweetFeed } from '@/components/TweetFeed'
 
