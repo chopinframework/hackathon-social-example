@@ -1,47 +1,57 @@
-import { useState } from "react"
+import { useUsername } from "@/hooks/useTweets"
+import { useState, useEffect } from "react"
 
 interface UserProfileProps {
   userId: string
-  username: string
-  onUsernameChange: (newUsername: string) => void
+  onUsernameChange: (username: string) => void
 }
 
-export function UserProfile({ userId, username, onUsernameChange }: UserProfileProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [newUsername, setNewUsername] = useState(username)
+export function UserProfile({ userId, onUsernameChange }: UserProfileProps) {
+  const { data: user, isLoading } = useUsername(userId)
+  const [inputValue, setInputValue] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onUsernameChange(newUsername)
-    setIsEditing(false)
+  useEffect(() => {
+    if (user?.username && !isLoading) {
+      setInputValue(user.username)
+    }
+  }, [user?.username, isLoading])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value)
+  }
+
+  const handleSubmit = () => {
+    if (inputValue.trim() && inputValue !== user?.username) {
+      onUsernameChange(inputValue.trim())
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      e.currentTarget.blur()
+    }
   }
 
   return (
-    <div className="bg-gray-100 p-4 rounded-lg mb-4">
-      <div className="mb-2">
-        <span className="font-bold">Wallet Address: </span>
-        <span className="font-mono">{userId}</span>
-      </div>
-      {isEditing ? (
-        <form onSubmit={handleSubmit} className="flex items-center">
+    <div className="mb-4 p-4 border rounded">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-bold">Profile</h2>
+          <p className="text-sm text-gray-500 font-mono">{userId}</p>
+        </div>
+        <div className="flex items-center">
           <input
             type="text"
-            value={newUsername}
-            onChange={(e) => setNewUsername(e.target.value)}
+            value={inputValue}
+            onChange={handleChange}
+            onBlur={handleSubmit}
+            onKeyDown={handleKeyDown}
             className="border rounded px-2 py-1 mr-2"
+            placeholder="Username"
           />
-          <button type="submit" className="bg-blue-500 text-white px-2 py-1 rounded">
-            Save
-          </button>
-        </form>
-      ) : (
-        <div className="flex items-center justify-between">
-          <span className="font-bold">{username}</span>
-          <button onClick={() => setIsEditing(true)} className="text-blue-500 underline">
-            Edit username
-          </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

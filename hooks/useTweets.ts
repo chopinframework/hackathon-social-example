@@ -1,63 +1,119 @@
-import { useState, useEffect } from "react"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Tweet, User } from "@/lib/types"
 
-interface Tweet {
-  id: string
-  content: string
-  userId: string // Ethereum address
-  username: string
-  timestamp: number
+const TWEETS_PER_PAGE = 10
+
+async function fetchTweets({ pageParam = 0 }) {
+  const response = await fetch(`/api/tweets?cursor=${pageParam}&limit=${TWEETS_PER_PAGE}`)
+  if (!response.ok) throw new Error('Failed to fetch tweets')
+  return response.json()
 }
 
-interface User {
-  id: string // Ethereum address
-  username: string
+async function fetchUser(userId: string): Promise<User> {
+  const response = await fetch(`/api/users?userId=${userId}`)
+  if (!response.ok) throw new Error('Failed to fetch user')
+  return response.json()
+}
+
+export function useInitialUser(userId: string) {
+  const queryClient = useQueryClient()
+  
+  return useQuery({
+    queryKey: ['initialUser', userId],
+    queryFn: async () => {
+      // First check if user exists
+      const checkResponse = await fetch(`/api/users?userId=${userId}`)
+      if (checkResponse.ok) {
+        const existingUser = await checkResponse.json()
+        if (existingUser) {
+          return existingUser
+        }
+      }
+
+      // If user doesn't exist, create them
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, username: 'Anonymous' })
+      })
+      if (!response.ok) throw new Error('Failed to create user')
+      const newUser = await response.json()
+      
+      // Update the user cache
+      queryClient.setQueryData(['user', userId], newUser)
+      return newUser
+    }
+  })
 }
 
 export function useTweets() {
-  const [tweets, setTweets] = useState<Tweet[]>([])
-  const [users, setUsers] = useState<User[]>([])
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const storedTweets = localStorage.getItem("tweets")
-    const storedUsers = localStorage.getItem("users")
-    if (storedTweets) {
-      setTweets(JSON.parse(storedTweets))
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    status
+  } = useInfiniteQuery({
+    queryKey: ['tweets'],
+    queryFn: fetchTweets,
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false
+  })
+
+  const tweets = data?.pages.flatMap(page => page.tweets) ?? []
+
+  const addTweetMutation = useMutation({
+    mutationFn: async ({ content, userId }: { content: string, userId: string }) => {
+      const response = await fetch('/api/tweets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, userId })
+      })
+      if (!response.ok) throw new Error('Failed to create tweet')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tweets'] })
     }
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers))
+  })
+
+  const updateUsernameMutation = useMutation({
+    mutationFn: async ({ userId, username }: { userId: string, username: string }) => {
+      const response = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, username })
+      })
+      if (!response.ok) throw new Error('Failed to update username')
+      return response.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['user', data.id] })
     }
-  }, [])
+  })
 
-  useEffect(() => {
-    localStorage.setItem("tweets", JSON.stringify(tweets))
-    localStorage.setItem("users", JSON.stringify(users))
-  }, [tweets, users])
-
-  const addTweet = (content: string, userId: string) => {
-    const user = users.find((u) => u.id === userId)
-    if (!user) return
-
-    const newTweet: Tweet = {
-      id: Date.now().toString(),
-      content,
-      userId,
-      username: user.username,
-      timestamp: Date.now(),
-    }
-    setTweets((prevTweets) => [newTweet, ...prevTweets])
+  return {
+    tweets,
+    status,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    addTweet: (content: string, userId: string) => 
+      addTweetMutation.mutate({ content, userId }),
+    updateUsername: (userId: string, username: string) =>
+      updateUsernameMutation.mutate({ userId, username })
   }
+}
 
-  const updateUsername = (userId: string, newUsername: string) => {
-    setUsers((prevUsers) => prevUsers.map((user) => (user.id === userId ? { ...user, username: newUsername } : user)))
-    setTweets((prevTweets) =>
-      prevTweets.map((tweet) => (tweet.userId === userId ? { ...tweet, username: newUsername } : tweet)),
-    )
-  }
-
-  const addUser = (id: string, username: string) => {
-    setUsers((prevUsers) => [...prevUsers, { id, username }])
-  }
-
-  return { tweets, users, addTweet, updateUsername, addUser }
+export function useUsername(userId: string) {
+  return useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => fetchUser(userId),
+    enabled: !!userId
+  })
 }
 
