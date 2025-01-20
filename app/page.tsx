@@ -15,7 +15,7 @@ export default function Home() {
   const [username, setUsername] = useState("Anonymous")
   const [newTweet, setNewTweet] = useState("")
   const [filter, setFilter] = useState("")
-  const { tweets, users, addTweet, updateUsername, addUser } = useTweets()
+  const { tweets, addTweet, updateUsername, addUser } = useTweets()
 
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId")
@@ -30,7 +30,7 @@ export default function Home() {
       localStorage.setItem("username", "Anonymous")
       addUser(newUserId, "Anonymous")
     }
-  }, [])
+  }, [addUser])
 
   const handleUsernameChange = (newUsername: string) => {
     setUsername(newUsername)
