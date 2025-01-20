@@ -46,7 +46,7 @@ export function useInitialUser(userId: string) {
   })
 }
 
-export function useTweets() {
+export function useTweets(initialData?: { tweets: Tweet[], nextCursor: number | null }) {
   const queryClient = useQueryClient()
 
   const {
@@ -61,7 +61,13 @@ export function useTweets() {
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     refetchInterval: 5000,
-    refetchIntervalInBackground: false
+    refetchIntervalInBackground: false,
+    ...(initialData && {
+      initialData: {
+        pages: [initialData],
+        pageParams: [0]
+      }
+    })
   })
 
   const tweets = data?.pages.flatMap(page => page.tweets) ?? []
