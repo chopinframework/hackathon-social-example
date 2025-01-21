@@ -1,7 +1,17 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Tweet, User } from "@/lib/types"
+import { login } from "@/lib/chopin-client"
 
 const TWEETS_PER_PAGE = 10
+
+export function useAddress(initialAddress: string | null) {
+  return useQuery({
+    queryKey: ['address'],
+    queryFn: () => login(),
+    initialData: initialAddress,
+    enabled: !initialAddress
+  })
+}
 
 async function fetchTweets({ pageParam = 0 }) {
   const response = await fetch(`/api/tweets?cursor=${pageParam}&limit=${TWEETS_PER_PAGE}`)

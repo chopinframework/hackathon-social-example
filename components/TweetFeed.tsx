@@ -2,34 +2,24 @@
 
 import { useState, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useTweets, useUsername, useInitialUser } from "@/hooks/useTweets"
+import { useTweets, useUsername, useInitialUser, useAddress } from "@/hooks/useTweets"
 import { Tweet } from "./Tweet"
 import { UserProfile } from "./UserProfile"
 
-// Helper function to generate a mock Ethereum address
-function generateMockEthereumAddress() {
-  return "0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("")
+interface TweetFeedProps {
+  initialAddress: string | null
 }
 
-function getStoredUserId() {
-  if (typeof window === 'undefined') return null
-  const stored = localStorage.getItem('userId')
-  if (stored) return stored
-  const newId = generateMockEthereumAddress()
-  localStorage.setItem('userId', newId)
-  return newId
-}
-
-export function TweetFeed() {
+export function TweetFeed({ initialAddress }: TweetFeedProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const filterUserId = searchParams.get('user') || ""
   
-  const [userId] = useState(() => getStoredUserId() || generateMockEthereumAddress())
+  const { data: userId } = useAddress(initialAddress)
   const [newTweet, setNewTweet] = useState("")
 
   // Initialize user and fetch data
-  const { status: initStatus } = useInitialUser(userId)
+  const { status: initStatus } = useInitialUser(userId || "")
   const { tweets, addTweet, updateUsername, status: tweetsStatus, hasNextPage, fetchNextPage, isFetchingNextPage } = useTweets()
   const { data: filterUser } = useUsername(filterUserId)
 
@@ -49,12 +39,14 @@ export function TweetFeed() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const handleUsernameChange = (newUsername: string) => {
-    updateUsername(userId, newUsername)
+    if (userId) {
+      updateUsername(userId, newUsername)
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (newTweet.trim()) {
+    if (newTweet.trim() && userId) {
       addTweet(newTweet, userId)
       setNewTweet("")
     }
@@ -78,7 +70,7 @@ export function TweetFeed() {
 
   const filteredTweets = filterUserId ? tweets.filter((tweet) => tweet.userId === filterUserId) : tweets
 
-  if (initStatus === 'pending' || tweetsStatus === 'pending') {
+  if (!userId || initStatus === 'pending' || tweetsStatus === 'pending') {
     return <div>Loading...</div>
   }
 

@@ -1,6 +1,7 @@
 import { sql } from '@vercel/postgres'
 import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query'
 import { TweetFeed } from '@/components/TweetFeed'
+import { getAddress } from '@/lib/chopin-server'
 
 async function getInitialTweets() {
   const { rows } = await sql`
@@ -24,6 +25,7 @@ async function getInitialTweets() {
 export default async function TweetsPage() {
   const queryClient = new QueryClient()
   const initialData = await getInitialTweets()
+  const address = await getAddress()
   
   await queryClient.prefetchInfiniteQuery({
     queryKey: ['tweets'],
@@ -33,7 +35,7 @@ export default async function TweetsPage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <TweetFeed />
+      <TweetFeed initialAddress={address} />
     </HydrationBoundary>
   )
 } 
