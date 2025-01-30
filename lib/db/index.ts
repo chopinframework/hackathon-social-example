@@ -1,5 +1,6 @@
 import { sql } from '@vercel/postgres';
 import { Tweet, User } from '../types';
+import { Oracle } from '@chopinframework/next';
 
 export async function getTweets(limit: number, cursor?: number): Promise<{ tweets: Tweet[], nextCursor: number | null }> {
   const { rows } = cursor
@@ -32,9 +33,10 @@ export async function getTweets(limit: number, cursor?: number): Promise<{ tweet
 }
 
 export async function createTweet(content: string, userId: string): Promise<Tweet> {
+  const now = await Oracle.now();
   const { rows } = await sql`
-    INSERT INTO tweets (content, user_id)
-    VALUES (${content}, ${userId})
+    INSERT INTO tweets (content, user_id, created_at)
+    VALUES (${content}, ${userId}, ${new Date(now).toISOString()})
     RETURNING *
   `;
   const tweet = rows[0];
